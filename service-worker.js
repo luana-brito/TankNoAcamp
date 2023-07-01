@@ -3,6 +3,9 @@ const urlsToCache = [
   '/',
   'index.html',
   'manifest.json',
+  'tank180.png',
+  'tank192.png',
+  'tank512.png',
   /* Lista de outros arquivos estáticos a serem armazenados em cache */
 ];
 
