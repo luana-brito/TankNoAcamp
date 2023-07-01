@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Transformadas no acamp</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    h2 {
+      color: #333;
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #1E90FF;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #87CEFA;
+    }
+
+    .popup-container {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      padding: 50px;
+      background-color: #fff;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      z-index: 9999;
+    }
+
+    .popup-container h2 {
+      margin-top: 0;
+    }
+
+    .popup-container label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .popup-container input[type="text"],
+    .popup-container input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+
+    .popup-container button {
+      margin-top: 20px;
+    }
+
+    .popup-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 9998;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    #chartContainer {
+      width: 100%;
+      height: 300px;
+      margin-top: 20px;
+    }
+
+    .progress-container {
+      display: none;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background-color: #4CAF50;
+      width: 0;
+    }
+
+    .progress-text {
+      font-size: 14px;
+      color: #333;
+      padding-left: 10px;
+      line-height: 30px;
+    }
+
+    /* Responsiveness */
+    @media screen and (max-width: 600px) {
+      .popup-container {
+        width: 90%;
+        padding: 20px;
+      }
+
+      #chartContainer {
+        height: 200px;
+      }
+    }    
+   /* Estilizando o checkbox */
+  input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #FF0000;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  /* Estilizando o estado selecionado do checkbox */
+  input[type="checkbox"]:checked {
+    border-color: #32CD32;
+  }
+
+  /* Estilizando o marcador do checkbox */
+  input[type="checkbox"]::before {
+    content: "\2713";
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    font-size: 12px;
+    line-height: 14px;
+    text-align: center;
+    background-color: transparent;
+    border-radius: 2px;
+    margin: 2px;
+    transition: background-color 0.3s, border-color 0.3s;
+    color: transparent;
+  }
+
+  /* Estilizando o marcador do checkbox no estado selecionado */
+  input[type="checkbox"]:checked::before {
+    background-color: #fff;
+    color: #32CD32;
+  }
+
+  </style>
+</head>
+<body>
+  <h1>Clay no Acamp</h1>
+
+  <div id="totalAmount"></div><br>
+  <div id="missingAmount"></div><br>
+
+
+  <button onclick="showDonationPopup()">Adicionar Doação</button><br><br>
+  <button onclick="showFundraisingPopup()">Adicionar Acampante</button>
+
+  <div class="popup-overlay" id="popupOverlay"></div>
+
+  <div class="popup-container" id="donationPopup">
+    <h2>Adicionar Doação</h2>
+    <label for="amount">Valor:</label>
+    <input type="number" id="amount" placeholder="Valor da doação" required><br><br>
+    <label for="description">Descrição:</label>
+    <input type="text" id="description" placeholder="Descrição da doação" required>
+    <button onclick="addDonation()">Adicionar</button>
+    <button onclick="hidePopup()">Cancelar</button>
+  </div>
+
+  <div class="popup-container" id="fundraisingPopup">
+    <h2>Adicionar Acampante</h2>
+    <label for="amount">Valor:</label>
+    <input type="number" id="amount" placeholder="Valor que precisa" required><br><br>
+    <label for="name">Nome:</label>
+    <input type="text" id="name" placeholder="Nome do acampante" required><br><br>
+    <label for="description">Descrição:</label>
+    <input type="text" id="description" placeholder="Descrição do acampante" required>
+    <button onclick="addFundraising()">Adicionar</button>
+    <button onclick="hidePopup()">Cancelar</button>
+  </div>
+
+  <table id="donationsTable">
+    <caption><h2>Doações</h2></caption>
+    <thead>
+      <tr>
+        <th>Valor</th>
+        <th>Descrição</th>
+        <th>Ação</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <table id="fundraisingsTable">
+    <caption><h2>Acampantes</h2></caption>
+    <thead>
+      <tr>
+        <th>Valor</th>
+        <th>Nome</th>
+        <th>Descrição</th>
+        <th>Inscrição</th>
+        <th>Ação</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div id="chartContainer"></div>
+
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="progress-text" id="progressText"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.1.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.1.2/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+  apiKey: "AIzaSyC0t9QISaYhl5T9Rc8D45DBCoCJkH5VBpk",
+  authDomain: "claynoacamp.firebaseapp.com",
+  projectId: "claynoacamp",
+  storageBucket: "claynoacamp.appspot.com",
+  messagingSenderId: "825831291969",
+  appId: "1:825831291969:web:850db735adfd339f55dac0"
+};
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.firestore();
+
+    var donations = [];
+    var fundraisings = [];
+
+    function addDonation() {
+      var amount = parseFloat(document.getElementById('donationPopup').querySelector('#amount').value);
+      var description = document.getElementById('donationPopup').querySelector('#description').value;
+
+      db.collection("donations").add({
+        amount: amount,
+        description: description
+      })
+      .then(function(docRef) {
+        donations.push({
+          id: docRef.id,
+          amount: amount,
+          description: description
+        });
+        renderDonationsTable();
+      })
+      .catch(function(error) {
+        console.error("Error adding donation: ", error);
+      });
+
+      hidePopup();
+    }
+
+    function addFundraising() {
+  var amount = parseFloat(document.getElementById('fundraisingPopup').querySelector('#amount').value);
+  var name = document.getElementById('fundraisingPopup').querySelector('#name').value;
+  var description = document.getElementById('fundraisingPopup').querySelector('#description').value;
+
+  db.collection("fundraisings").add({
+    amount: amount,
+    name: name,
+    description: description,
+    checked: false // Adicionando a propriedade "checked" inicialmente como false
+  })
+  .then(function(docRef) {
+    fundraisings.push({
+      id: docRef.id,
+      amount: amount,
+      name: name,
+      description: description,
+      checked: false
+    });
+    renderFundraisingsTable();
+  })
+  .catch(function(error) {
+    console.error("Error adding fundraising: ", error);
+  });
+
+  hidePopup();
+}
+    // Função para atualizar o estado de check de uma convidada
+function updateCheckStatus(fundraisingId, checked) {
+  db.collection("fundraisings").doc(fundraisingId).update({
+    checked: checked
+  })
+  .then(function() {
+    var fundraising = fundraisings.find(function(fundraising) {
+      return fundraising.id === fundraisingId;
+    });
+
+    if (fundraising) {
+      fundraising.checked = checked;
+    }
+
+    renderFundraisingsTable();
+  })
+  .catch(function(error) {
+    console.error("Error updating check status: ", error);
+  });
+}
+    function saveCheckStatus() {
+  var checkboxes = document.querySelectorAll('#fundraisingsTable input[type="checkbox"]');
+  checkboxes.forEach(function(checkbox) {
+    var fundraisingId = checkbox.parentNode.parentNode.dataset.id;
+    var checked = checkbox.checked;
+    localStorage.setItem(fundraisingId, checked);
+  });
+}
+    function addCheckboxEventListeners() {
+  var checkboxes = document.querySelectorAll('#fundraisingsTable input[type="checkbox"]');
+  checkboxes.forEach(function(checkbox) {
+    checkbox.addEventListener('change', saveCheckStatus);
+  });
+}
+
+function deleteDonation(donationId) {
+  db.collection("donations").doc(donationId).delete()
+    .then(function() {
+      donations = donations.filter(function(donation) {
+        return donation.id !== donationId;
+      });
+      renderDonationsTable();
+      updateProgress();
+    })
+    .catch(function(error) {
+      console.error("Error deleting donation: ", error);
+    });
+}
+
+
+function deleteFundraising(fundraisingId) {
+  db.collection("fundraisings").doc(fundraisingId).delete()
+    .then(function() {
+      fundraisings = fundraisings.filter(function(fundraising) {
+        return fundraising.id !== fundraisingId;
+      });
+      renderFundraisingsTable();
+      updateProgress();
+    })
+    .catch(function(error) {
+      console.error("Error deleting fundraising: ", error);
+    });
+}
+
+function renderDonationsTable() {
+  var tableBody = document.getElementById('donationsTable').querySelector('tbody');
+  tableBody.innerHTML = "";
+
+  donations.forEach(function(donation) {
+    var row = document.createElement('tr');
+    row.innerHTML = "<td>" + donation.amount + "</td><td>" + donation.description + "</td><td><button onclick=\"deleteDonation('" + donation.id + "')\">Excluir</button></td>";
+    tableBody.appendChild(row);
+  });
+
+  // Calculate total amount
+  var totalAmount = donations.reduce(function(acc, donation) {
+    return acc + donation.amount;
+  }, 0);
+
+  // Update total amount element
+  var totalAmountElement = document.getElementById('totalAmount');
+  totalAmountElement.textContent = "Total arrecadado: R$" + totalAmount.toFixed(2);
+}
+
+
+function renderFundraisingsTable() {
+  var tableBody = document.getElementById('fundraisingsTable').querySelector('tbody');
+  tableBody.innerHTML = "";
+
+  fundraisings.forEach(function(fundraising) {
+    var row = document.createElement('tr');
+    row.dataset.id = fundraising.id;
+    row.innerHTML = "<td>" + fundraising.amount + "</td><td>" + fundraising.name + "</td><td>" + fundraising.description + "</td><td><input type='checkbox'></td><td><button onclick=\"deleteFundraising('" + fundraising.id + "')\">Excluir</button></td>";
+
+    tableBody.appendChild(row);
+  });
+
+  // Atualizar o estado dos checkboxes
+  var checkboxes = tableBody.querySelectorAll('input[type="checkbox"]');
+  checkboxes.forEach(function(checkbox) {
+    var fundraisingId = checkbox.parentNode.parentNode.dataset.id;
+    var checked = localStorage.getItem(fundraisingId) === 'true';
+    checkbox.checked = checked;
+  });
+  addCheckboxEventListeners();
+}
+
+
+
+
+    function showDonationPopup() {
+      var popupOverlay = document.getElementById('popupOverlay');
+      var donationPopup = document.getElementById('donationPopup');
+
+      popupOverlay.style.display = "block";
+      donationPopup.style.display = "block";
+    }
+
+    function showFundraisingPopup() {
+      var popupOverlay = document.getElementById('popupOverlay');
+      var fundraisingPopup = document.getElementById('fundraisingPopup');
+
+      popupOverlay.style.display = "block";
+      fundraisingPopup.style.display = "block";
+    }
+
+    function hidePopup() {
+      var popupOverlay = document.getElementById('popupOverlay');
+      var donationPopup = document.getElementById('donationPopup');
+      var fundraisingPopup = document.getElementById('fundraisingPopup');
+
+      popupOverlay.style.display = "none";
+      donationPopup.style.display = "none";
+      fundraisingPopup.style.display = "none";
+    }
+
+  function calculateTotalAmount() {
+  var totalAmount = 0;
+  donations.forEach(function(donation) {
+    totalAmount += donation.amount;
+  });
+
+  var goalAmount = 0;
+  fundraisings.forEach(function(fundraising) {
+    goalAmount += fundraising.amount;
+  });
+
+  var remainingAmount = goalAmount - totalAmount;
+  return remainingAmount;
+}
+
+
+
+
+
+    function updateProgress() {
+  var progressBar = document.getElementById('progressBar');
+  var progressText = document.getElementById('progressText');
+  var missingAmountText = document.getElementById('missingAmount');
+  var totalAmount = calculateTotalAmount();
+  var goalAmount = 0;
+  var missingAmount = goalAmount - totalAmount;
+
+  var progressPercentage = (totalAmount / goalAmount) * 100;
+  progressBar.style.width = progressPercentage + "%";
+  progressText.innerHTML = "Progresso: R$" + totalAmount.toFixed(2) + " de R$" + goalAmount.toFixed(2);
+
+  if (progressPercentage >= 100) {
+    progressBar.style.backgroundColor = "#4CAF50";
+  } else {
+    progressBar.style.backgroundColor = "#f44336";
+  }
+
+  missingAmountText.innerHTML = "Falta: R$" + missingAmount.toFixed(2);
+}
+
+    db.collection("donations").onSnapshot(function(querySnapshot) {
+  donations = [];
+  querySnapshot.forEach(function(doc) {
+    donations.push({
+      id: doc.id,
+      amount: doc.data().amount,
+      description: doc.data().description
+    });
+  });
+  renderDonationsTable();
+  updateProgress();
+});
+
+    db.collection("fundraisings").onSnapshot(function(querySnapshot) {
+      fundraisings = [];
+      querySnapshot.forEach(function(doc) {
+        fundraisings.push({
+          id: doc.id,
+          amount: doc.data().amount,
+          name: doc.data().name,
+          description: doc.data().description
+        });
+      });
+      renderFundraisingsTable();
+      updateProgress();
+    });
+
+    // Chart.js configuration
+    var chartData = {
+      labels: ["Doações", "Convidadas"],
+      datasets: [{
+        label: "Valor",
+        data: [0, 0],
+        backgroundColor: ["#4CAF50", "#f44336"]
+      }]
+    };
+
+    var chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 100,
+            callback: function(value, index, values) {
+              return "R$" + value;
+            }
+          }
+        }
+      }
+    };
+
+    var chart = new Chart(document.getElementById('chartContainer').getContext('2d'), {
+      type: 'bar',
+      data: chartData,
+      options: chartOptions
+    });
+
+    function updateChart() {
+      var donationsTotal = 0;
+      var fundraisingsTotal = 0;
+
+      donations.forEach(function(donation) {
+        donationsTotal += donation.amount;
+      });
+      fundraisings.forEach(function(fundraising) {
+        fundraisingsTotal += fundraising.amount;
+      });
+
+      chart.data.datasets[0].data = [donationsTotal, fundraisingsTotal];
+      chart.update();
+    }
+
+    updateProgress();
+    updateChart();
+
+
+    function updateProgress() {
+  var progressBar = document.getElementById('progressBar');
+  var progressText = document.getElementById('progressText');
+  var missingAmountText = document.getElementById('missingAmount');
+  var totalAmount = calculateTotalAmount();
+  var goalAmount = 0;
+  var missingAmount = goalAmount - totalAmount;
+
+  var progressPercentage = (totalAmount / goalAmount) * 100;
+  progressBar.style.width = progressPercentage + "%";
+  progressText.innerHTML = "Progresso: R$" + totalAmount.toFixed(2) + " de R$" + goalAmount.toFixed(2);
+
+  if (progressPercentage >= 100) {
+    progressBar.style.backgroundColor = "#4CAF50";
+  } else {
+    progressBar.style.backgroundColor = "#f44336";
+  }
+
+  missingAmountText.innerHTML = "Caixa: R$" + missingAmount.toFixed(2);
+}
+
+  </script>
+</body>
+</html>
